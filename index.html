@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fire Pump Annual Performance Test — NFPA 25</title>
+<title>Fire Pump Annual Performance Test | NFPA 25</title>
 <script>
 /*!
  * Chart.js v4.4.1
@@ -632,7 +632,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   <div class="card">
     <h2>Email Report</h2>
     <div class="fld"><label>Send To</label><input id="emailTo" type="email" value="steve@taylorfire.com"></div>
-    <p class="hint" style="margin-top:8px">On phone/tablet: tap <strong>Email PDF</strong>, then choose Mail. The PDF arrives already attached \u2014 just hit send.</p>
+    <p class="hint" style="margin-top:8px">On phone/tablet: tap <strong>Email PDF</strong>, then choose Mail. The PDF arrives already attached, just hit send.</p>
   </div>
 </div>
 
@@ -853,7 +853,7 @@ async function makePDF(emailMode){
 
   // footer p1
   doc.setFontSize(8); doc.setTextColor(...muted);
-  doc.text('Page 1 of 2  —  Data & Performance Curve',M,778);
+  doc.text('Page 1 of 2  |  Data & Performance Curve',M,778);
   doc.text(new Date().toLocaleString(),W-M,778,{align:'right'});
 
   // ===== PAGE 2 =====
@@ -896,7 +896,7 @@ async function makePDF(emailMode){
   doc.text(txt('witness')||'',M,y2);
 
   // signatures: embed drawn images above the lines
-  y2+=40;
+  y2+=72;
   const sigW=(W-2*M-40)/2;
   const sigH=46;
   const techImg=sigImage('sigTech');
@@ -917,7 +917,7 @@ async function makePDF(emailMode){
   if(witStamp) doc.text(witStamp,M+sigW+40,y2+25);
 
   doc.setFontSize(8); doc.setTextColor(...muted);
-  doc.text('Page 2 of 2  —  Notes & Certification',M,778);
+  doc.text('Page 2 of 2  |  Notes & Certification',M,778);
   doc.text(new Date().toLocaleString(),W-M,778,{align:'right'});
 
   // filename
