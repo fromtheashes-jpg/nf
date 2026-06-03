@@ -668,12 +668,22 @@ function compute(){
   $('lim_100').textContent = rp??'—';
   $('lim_150').textContent = rp!=null? +(rp*0.65).toFixed(2):'—';
 
-  // test points + per-point pass
+  // test points + per-point evaluation
   const t = {churn:num('t_churn'), f100:num('t_100'), f150:num('t_150')};
   const floor = {churn:cp!=null?cp*0.95:null, f100:rp!=null?rp*0.95:null, f150:p150!=null?p150*0.95:null};
+
+  // Physical sanity ceiling: no test reading should exceed churn rated pressure by more
+  // than 15% (a centrifugal pump cannot make more head than its shutoff/churn pressure).
+  const churnRef = (cp!=null ? cp : (rp!=null ? rp*1.4 : null));
+  const maxPhys = churnRef!=null ? churnRef*1.15 : null;
+
   const setPoint=(cell,test,fr)=>{
     const el=$(cell);
-    if(test==null||fr==null){el.textContent='—';el.className='';return null;}
+    if(test==null||fr==null){el.textContent='—';el.className='';el.style.fontWeight='700';return null;}
+    // impossible / out-of-range reading
+    if(test<0 || (maxPhys!=null && test>maxPhys)){
+      el.textContent='ERROR'; el.className='v-fail'; el.style.fontWeight='700'; return 'error';
+    }
     const ok=test>=fr;
     el.textContent= ok?'PASS':'LOW';
     el.className= ok?'v-pass':'v-fail';
@@ -683,24 +693,44 @@ function compute(){
   const pc=setPoint('p_churn',t.churn,floor.churn);
   const p1=setPoint('p_100',t.f100,floor.f100);
   const p5=setPoint('p_150',t.f150,floor.f150);
+  const anyError = [pc,p1,p5].includes('error');
+
+  // Curve-shape check: a valid pump curve descends (churn >= 100% >= 150%).
+  let shapeBad=false;
+  if(t.churn!=null && t.f100!=null && t.churn < t.f100) shapeBad=true;
+  if(t.f100!=null && t.f150!=null && t.f100 < t.f150) shapeBad=true;
 
   // overall acceptance
   const av=$('acceptVal');
   if([t.churn,t.f100,t.f150].some(x=>x==null)){
     av.textContent='ENTER TEST DATA'; av.className='val v-wait';
-  } else if(pc&&p1&&p5){
+  } else if(anyError || shapeBad){
+    av.textContent='ERROR'; av.className='val v-fail';
+  } else if(pc===true&&p1===true&&p5===true){
     av.textContent='PASS'; av.className='val v-pass';
   } else {
     av.textContent='REVIEW'; av.className='val v-fail';
   }
 
-  // NFPA 20 envelope
+  // NFPA 20 envelope: rated curve AND test results must both stay within limits
   const ev=$('envVal');
-  if(cp!=null&&rp!=null&&p150!=null){
-    const ok = cp<=rp*1.4 && p150>=rp*0.65;
+  const ratedReady = (cp!=null&&rp!=null&&p150!=null);
+  const testReady = (t.churn!=null&&t.f100!=null&&t.f150!=null);
+  if(!ratedReady){
+    ev.textContent='—'; ev.className='val v-wait';
+  } else {
+    const ratedOk = cp<=rp*1.4 && p150>=rp*0.65;
+    // test results checked against the SAME envelope (referenced to rated pressure)
+    let testOk = true;
+    if(testReady){
+      if(anyError || shapeBad) testOk=false;
+      if(t.churn > rp*1.4) testOk=false;       // measured churn exceeds 140% rated
+      if(t.f150 < rp*0.65) testOk=false;        // measured 150% below 65% rated
+    }
+    const ok = ratedOk && testOk;
     ev.textContent= ok?'OK':'CHECK';
     ev.className= ok? 'val v-ok':'val v-check';
-  } else { ev.textContent='—'; ev.className='val v-wait'; }
+  }
 
   drawChart(flows, {churn:cp,f100:rp,f150:p150}, t, floor);
   return {rf,rp,cp,p150,flows,t,floor};
@@ -835,7 +865,7 @@ async function makePDF(emailMode){
     doc.setFont('EBGaramond','bold'); doc.setFontSize(8); doc.setTextColor(...muted);
     doc.text(title.toUpperCase(),bx+12,y+16);
     let col=ink;
-    if(val==='PASS'||val==='OK')col=green; else if(val==='REVIEW'||val==='CHECK')col=red; else col=muted;
+    if(val==='PASS'||val==='OK')col=green; else if(val==='REVIEW'||val==='CHECK'||val==='ERROR')col=red; else col=muted;
     doc.setFontSize(18); doc.setTextColor(...col); doc.text(val,bx+12,y+38);
     doc.setFont('EBGaramond','normal'); doc.setFontSize(7.5); doc.setTextColor(...muted);
     doc.text(sub,bx+12,y+52);
